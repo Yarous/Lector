@@ -1,0 +1,22 @@
+[package]
+name = "lectord"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lector-proto = { path = "../lector-proto" }
+lector-transport = { path = "../lector-transport" }
+tokio.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+toml.workspace = true
+dashmap.workspace = true
+hostname = "0.4"
+fs2 = "0.4"
+hex = "0.4"
+
+[target.'cfg(windows)'.dependencies]
+windows-service = "0.8.1"

@@ -1,0 +1,184 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme, ThemeColors } from "theme.slint";
+import { PeerCard, PeerInfo } from "components/peer_card.slint";
+import { Toolbar } from "components/toolbar.slint";
+import { FilePanel } from "components/file_panel.slint";
+import { StatusBar } from "components/status_bar.slint";
+
+export { PeerInfo, Theme }
+
+export global AppBridge {
+    in-out property <string> selected-file-path: "";
+    in-out property <string> selected-file-name: "";
+    in-out property <string> selected-file-size: "";
+    in-out property <string> file-hash: "";
+    in-out property <[PeerInfo]> peers: [];
+    in-out property <string> status-text: "Ready — scan the network to discover peers";
+    in-out property <bool> distributing: false;
+    in-out property <bool> scanning: false;
+    in-out property <int> overall-progress: 0;
+
+    pure callback count-selected() -> int;
+    pure callback count-online() -> int;
+
+    callback scan-network();
+    callback select-file();
+    callback start-distribution();
+    callback cancel-distribution();
+    callback select-all();
+    callback deselect-all();
+    callback peer-toggled(int, bool);
+
+    count-selected() => { return 0; }
+    count-online() => { return 0; }
+}
+
+component EmptyState inherits Rectangle {
+    in property <string> icon;
+    in property <string> title;
+    in property <string> subtitle;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Theme.spacing-sm;
+
+        Text {
+            text: icon;
+            font-size: 48px;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: title;
+            font-size: Theme.font-xl;
+            font-weight: 600;
+            color: Theme.colors.text-primary;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: subtitle;
+            font-size: Theme.font-md;
+            color: Theme.colors.text-muted;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    title: "Lector Control Panel";
+    preferred-width: 1100px;
+    preferred-height: 760px;
+    background: Theme.colors.bg;
+    default-font-family: "JetBrains Mono";
+    default-font-size: Theme.font-md;
+
+    VerticalLayout {
+        spacing: 0px;
+
+        Rectangle {
+            height: 52px;
+            background: Theme.colors.surface;
+
+            drop-shadow-blur: 4px;
+            drop-shadow-color: Theme.colors.shadow;
+            drop-shadow-offset-y: 1px;
+
+            HorizontalLayout {
+                padding-left: Theme.spacing-xl;
+                padding-right: Theme.spacing-xl;
+                alignment: stretch;
+
+                HorizontalLayout {
+                    spacing: Theme.spacing-md;
+                    alignment: start;
+
+                    Text {
+                        text: "📚";
+                        font-size: Theme.font-xxl;
+                        vertical-alignment: center;
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+
+                        Text {
+                            text: "Lector";
+                            font-size: Theme.font-xl;
+                            font-weight: 700;
+                            color: Theme.colors.text-primary;
+                            letter-spacing: 0.5px;
+                        }
+
+                        Text {
+                            text: "Classroom File Distribution";
+                            font-size: Theme.font-xs;
+                            color: Theme.colors.text-muted;
+                            letter-spacing: 0.8px;
+                        }
+                    }
+                }
+
+                Rectangle { horizontal-stretch: 1; }
+            }
+        }
+
+        Toolbar {
+            distributing: AppBridge.distributing;
+            selected-count: AppBridge.count-selected();
+            online-count: AppBridge.count-online();
+            file-name: AppBridge.selected-file-name;
+            has-file: AppBridge.selected-file-path != "";
+
+            scan => { AppBridge.scan-network(); }
+            select-file => { AppBridge.select-file(); }
+            distribute => { AppBridge.start-distribution(); }
+            cancel => { AppBridge.cancel-distribution(); }
+            select-all => { AppBridge.select-all(); }
+            deselect-all => { AppBridge.deselect-all(); }
+            toggle-theme => { Theme.dark-mode = !Theme.dark-mode; }
+        }
+
+        FilePanel {
+            file-name: AppBridge.selected-file-name;
+            file-size: AppBridge.selected-file-size;
+            file-hash: AppBridge.file-hash;
+            overall-progress: AppBridge.overall-progress;
+            distributing: AppBridge.distributing;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+            background: Theme.colors.bg;
+
+            if AppBridge.peers.length == 0 : EmptyState {
+                icon: "🔍";
+                title: "No peers discovered";
+                subtitle: "Click Scan to discover computers on the network";
+            }
+
+            if AppBridge.peers.length > 0 : ScrollView {
+                viewport-height: grid-layout.preferred-height;
+
+                grid-layout := VerticalLayout {
+                    padding: Theme.spacing-lg;
+                    spacing: Theme.spacing-sm;
+
+                    for peer[idx] in AppBridge.peers : PeerCard {
+                        peer: peer;
+                        checked: peer.selected;
+                        toggled(val) => { AppBridge.peer-toggled(idx, val); }
+                    }
+                }
+            }
+        }
+
+        StatusBar {
+            message: AppBridge.status-text;
+            online-count: AppBridge.count-online();
+            total-count: AppBridge.peers.length;
+            scanning: AppBridge.scanning;
+        }
+    }
+}

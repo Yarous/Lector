@@ -1,0 +1,74 @@
+import { Theme } from "../theme.slint";
+
+export component FilePanel inherits Rectangle {
+    in property <string> file-name;
+    in property <string> file-size;
+    in property <string> file-hash;
+    in property <int> overall-progress;
+    in property <bool> distributing;
+
+    height: distributing ? 80px : 0px;
+    clip: true;
+    background: Theme.colors.surface;
+    border-width: 1px;
+    border-color: Theme.colors.border;
+    border-radius: Theme.radius-md;
+
+    animate height { duration: 250ms; easing: ease-out; }
+
+    if distributing : VerticalLayout {
+        padding: Theme.spacing-md;
+        spacing: Theme.spacing-sm;
+
+        HorizontalLayout {
+            spacing: Theme.spacing-sm;
+            alignment: stretch;
+
+            Text {
+                text: "📦 " + file-name;
+                font-size: Theme.font-md;
+                font-weight: 600;
+                color: Theme.colors.text-primary;
+                overflow: elide;
+                horizontal-stretch: 1;
+            }
+
+            Text {
+                text: file-size;
+                font-size: Theme.font-sm;
+                color: Theme.colors.text-muted;
+                font-family: "JetBrains Mono";
+            }
+
+            Text {
+                text: overall-progress + "%";
+                font-size: Theme.font-lg;
+                font-weight: 700;
+                color: overall-progress >= 100 ? Theme.colors.success : Theme.colors.accent;
+                font-family: "JetBrains Mono";
+            }
+        }
+
+        Rectangle {
+            height: 6px;
+            border-radius: 3px;
+            background: Theme.colors.border;
+
+            Rectangle {
+                height: parent.height;
+                width: parent.width * (overall-progress / 100);
+                border-radius: 3px;
+                background: overall-progress >= 100 ? Theme.colors.success : Theme.colors.accent;
+                animate width { duration: 400ms; easing: ease-out; }
+            }
+        }
+
+        if file-hash != "" : Text {
+            text: "SHA-256: " + file-hash;
+            font-size: Theme.font-xs;
+            color: Theme.colors.text-muted;
+            font-family: "JetBrains Mono";
+            overflow: elide;
+        }
+    }
+}

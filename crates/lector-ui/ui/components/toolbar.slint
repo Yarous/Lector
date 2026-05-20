@@ -1,0 +1,158 @@
+import { Theme } from "../theme.slint";
+
+component ToolButton inherits Rectangle {
+    in property <string> label;
+    in property <string> icon;
+    in property <bool> enabled: true;
+    in property <bool> primary: false;
+    in property <bool> destructive: false;
+    callback clicked;
+
+    height: 38px;
+    min-width: 44px;
+    horizontal-stretch: 0;
+    border-radius: Theme.radius-sm;
+
+    background: !enabled ? Theme.colors.surface :
+                destructive ? (touch.has-hover ? Theme.colors.danger : Theme.colors.danger-bg) :
+                primary ? (touch.has-hover ? Theme.colors.accent-hover : Theme.colors.accent) :
+                touch.has-hover ? Theme.colors.surface-hover : Theme.colors.surface;
+
+    border-width: primary || destructive ? 0px : 1px;
+    border-color: Theme.colors.border;
+
+    animate background { duration: 120ms; easing: ease-out; }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: Theme.spacing-md;
+        padding-right: Theme.spacing-md;
+        spacing: Theme.spacing-sm;
+        alignment: center;
+
+        if icon != "" : Text {
+            text: icon;
+            font-size: Theme.font-lg;
+            vertical-alignment: center;
+        }
+
+        if label != "" : Text {
+            text: label;
+            font-size: Theme.font-md;
+            font-weight: 500;
+            color: !enabled ? Theme.colors.text-muted :
+                   destructive ? (touch.has-hover ? Theme.colors.accent-text : Theme.colors.danger) :
+                   primary ? Theme.colors.accent-text : Theme.colors.text-primary;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component Toolbar inherits Rectangle {
+    in property <bool> distributing;
+    in property <int> selected-count;
+    in property <int> online-count;
+    in property <string> file-name;
+    in property <bool> has-file;
+
+    callback scan();
+    callback select-file();
+    callback distribute();
+    callback cancel();
+    callback select-all();
+    callback deselect-all();
+    callback toggle-theme();
+
+    height: 56px;
+    background: Theme.colors.surface;
+
+    drop-shadow-blur: 8px;
+    drop-shadow-color: Theme.colors.shadow;
+    drop-shadow-offset-y: 2px;
+
+    HorizontalLayout {
+        padding: Theme.spacing-md;
+        spacing: Theme.spacing-sm;
+        alignment: stretch;
+
+        ToolButton {
+            icon: "🔍";
+            label: "Scan";
+            enabled: !distributing;
+            clicked => { scan(); }
+        }
+
+        Rectangle { width: 1px; background: Theme.colors.border; }
+
+        ToolButton {
+            icon: "📁";
+            label: file-name == "" ? "Choose File" : file-name;
+            enabled: !distributing;
+            clicked => { select-file(); }
+        }
+
+        Rectangle { width: 1px; background: Theme.colors.border; }
+
+        ToolButton {
+            icon: "☑";
+            label: "All";
+            enabled: !distributing && online-count > 0;
+            clicked => { select-all(); }
+        }
+
+        ToolButton {
+            icon: "☐";
+            label: "None";
+            enabled: !distributing && selected-count > 0;
+            clicked => { deselect-all(); }
+        }
+
+        Rectangle { horizontal-stretch: 1; }
+
+        if selected-count > 0 && !distributing : Rectangle {
+            height: 28px;
+            width: sel-text.preferred-width + 20px;
+            border-radius: Theme.radius-xl;
+            background: Theme.colors.accent;
+            y: (parent.height - self.height) / 2;
+
+            sel-text := Text {
+                text: selected-count + " selected";
+                font-size: Theme.font-sm;
+                font-weight: 600;
+                color: Theme.colors.accent-text;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Rectangle { width: 1px; background: Theme.colors.border; }
+
+        if !distributing : ToolButton {
+            icon: "🚀";
+            label: "Distribute";
+            primary: true;
+            enabled: has-file && selected-count > 0;
+            clicked => { distribute(); }
+        }
+
+        if distributing : ToolButton {
+            icon: "⏹";
+            label: "Cancel";
+            destructive: true;
+            clicked => { cancel(); }
+        }
+
+        Rectangle { width: 1px; background: Theme.colors.border; }
+
+        ToolButton {
+            icon: Theme.dark-mode ? "☀" : "🌙";
+            clicked => { toggle-theme(); }
+        }
+    }
+}

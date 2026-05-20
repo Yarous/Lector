@@ -1,0 +1,12 @@
+[package]
+name = "lector-proto"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tonic.workspace = true
+prost.workspace = true
+tonic-prost = "0.14.6"
+
+[build-dependencies]
+tonic-prost-build = "0.14.6"

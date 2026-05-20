@@ -1,0 +1,189 @@
+import { CheckBox } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+
+export struct PeerInfo {
+    address: string,
+    hostname: string,
+    status: string,
+    ping-ms: int,
+    progress: int,
+    free-disk-gb: float,
+    selected: bool,
+    version: string,
+}
+
+export component PeerCard inherits Rectangle {
+    in property <PeerInfo> peer;
+    in-out property <bool> checked: peer.selected;
+    callback toggled(bool);
+
+    height: 96px;
+    border-radius: Theme.radius-md;
+    border-width: 1.5px;
+    border-color: checked ? Theme.colors.accent :
+                  peer.status == "online" ? Theme.colors.border : Theme.colors.danger-bg;
+    background: touch.has-hover ?
+                (checked ? Theme.colors.selection : Theme.colors.surface-hover) :
+                (checked ? Theme.colors.selection : Theme.colors.surface);
+    clip: true;
+
+    drop-shadow-blur: 4px;
+    drop-shadow-color: Theme.colors.shadow;
+    drop-shadow-offset-y: 1px;
+
+    animate background { duration: 150ms; easing: ease-out; }
+    animate border-color { duration: 150ms; easing: ease-out; }
+
+    touch := TouchArea {
+        clicked => {
+            if peer.status == "online" {
+                checked = !checked;
+                toggled(checked);
+            }
+        }
+    }
+
+    HorizontalLayout {
+        padding: Theme.spacing-md;
+        spacing: Theme.spacing-md;
+        alignment: stretch;
+
+        VerticalLayout {
+            alignment: center;
+            width: 24px;
+
+            if peer.status == "online" : CheckBox {
+                checked <=> root.checked;
+                toggled => { root.toggled(self.checked); }
+            }
+
+            if peer.status != "online" : Rectangle {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                background: Theme.colors.danger-bg;
+
+                Text {
+                    text: "✕";
+                    font-size: Theme.font-sm;
+                    color: Theme.colors.danger;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        Rectangle {
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            y: (parent.height - self.height) / 2;
+            background: peer.status == "online" ? Theme.colors.success : Theme.colors.danger;
+            animate background { duration: 300ms; }
+        }
+
+        VerticalLayout {
+            spacing: Theme.spacing-xs;
+            alignment: center;
+            horizontal-stretch: 1;
+
+            HorizontalLayout {
+                spacing: Theme.spacing-sm;
+
+                Text {
+                    text: peer.hostname == "" ? "Unknown" : peer.hostname;
+                    font-size: Theme.font-lg;
+                    font-weight: 600;
+                    color: Theme.colors.text-primary;
+                    overflow: elide;
+                }
+
+                if peer.version != "" : Rectangle {
+                    height: 20px;
+                    width: ver-text.preferred-width + 12px;
+                    border-radius: 4px;
+                    background: Theme.colors.surface-active;
+                    y: (parent.height - self.height) / 2;
+
+                    ver-text := Text {
+                        text: "v" + peer.version;
+                        font-size: Theme.font-xs;
+                        color: Theme.colors.text-muted;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: peer.address;
+                font-size: Theme.font-sm;
+                color: Theme.colors.text-muted;
+                font-family: "JetBrains Mono";
+            }
+
+            HorizontalLayout {
+                spacing: Theme.spacing-lg;
+
+                if peer.status == "online" : HorizontalLayout {
+                    spacing: Theme.spacing-xs;
+                    Text { text: "⏱"; font-size: Theme.font-xs; vertical-alignment: center; }
+                    Text {
+                        text: peer.ping-ms + " ms";
+                        font-size: Theme.font-sm;
+                        color: peer.ping-ms < 20 ? Theme.colors.success :
+                               peer.ping-ms < 100 ? Theme.colors.warning : Theme.colors.danger;
+                        font-family: "JetBrains Mono";
+                    }
+                }
+
+                if peer.status == "online" : HorizontalLayout {
+                    spacing: Theme.spacing-xs;
+                    Text { text: "💾"; font-size: Theme.font-xs; vertical-alignment: center; }
+                    Text {
+                        text: round(peer.free-disk-gb * 10) / 10 + " GB";
+                        font-size: Theme.font-sm;
+                        color: peer.free-disk-gb > 5 ? Theme.colors.success :
+                               peer.free-disk-gb > 1 ? Theme.colors.warning : Theme.colors.danger;
+                        font-family: "JetBrains Mono";
+                    }
+                }
+
+                if peer.status != "online" : Text {
+                    text: "Unreachable";
+                    font-size: Theme.font-sm;
+                    color: Theme.colors.danger;
+                    font-italic: true;
+                }
+            }
+        }
+
+        if peer.progress > 0 && peer.progress <= 100 : VerticalLayout {
+            alignment: center;
+            width: 56px;
+
+            Text {
+                text: peer.progress + "%";
+                font-size: Theme.font-lg;
+                font-weight: 700;
+                color: peer.progress >= 100 ? Theme.colors.success : Theme.colors.accent;
+                horizontal-alignment: center;
+                font-family: "JetBrains Mono";
+            }
+
+            Rectangle {
+                height: 4px;
+                border-radius: 2px;
+                background: Theme.colors.border;
+
+                Rectangle {
+                    height: parent.height;
+                    width: parent.width * (peer.progress / 100);
+                    border-radius: 2px;
+                    background: peer.progress >= 100 ? Theme.colors.success : Theme.colors.accent;
+                    animate width { duration: 300ms; easing: ease-out; }
+                }
+            }
+        }
+    }
+}

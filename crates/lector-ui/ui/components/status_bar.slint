@@ -1,0 +1,64 @@
+import { Theme } from "../theme.slint";
+
+export component StatusBar inherits Rectangle {
+    in property <string> message;
+    in property <int> online-count;
+    in property <int> total-count;
+    in property <bool> scanning;
+
+    height: 32px;
+    background: Theme.colors.surface;
+    border-width: 1px;
+    border-color: Theme.colors.border;
+
+    HorizontalLayout {
+        padding-left: Theme.spacing-md;
+        padding-right: Theme.spacing-md;
+        spacing: Theme.spacing-lg;
+        alignment: stretch;
+
+        HorizontalLayout {
+            spacing: Theme.spacing-xs;
+            horizontal-stretch: 1;
+
+            if scanning : Text {
+                text: "⟳";
+                font-size: Theme.font-sm;
+                color: Theme.colors.accent;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: message;
+                font-size: Theme.font-sm;
+                color: Theme.colors.text-secondary;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+
+        Rectangle { width: 1px; background: Theme.colors.border; }
+
+        HorizontalLayout {
+            spacing: Theme.spacing-xs;
+            width: 140px;
+
+            Rectangle {
+                width: 8px;
+                height: 8px;
+                border-radius: 4px;
+                background: online-count > 0 ? Theme.colors.success : Theme.colors.text-muted;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: online-count + " / " + total-count + " online";
+                font-size: Theme.font-sm;
+                font-weight: 500;
+                color: Theme.colors.text-secondary;
+                vertical-alignment: center;
+                font-family: "JetBrains Mono";
+            }
+        }
+    }
+}

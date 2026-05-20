@@ -1,0 +1,55 @@
+syntax = "proto3";
+package lector;
+
+service LectorDaemon {
+  rpc Ping (PingRequest) returns (PingResponse);
+  rpc InitDownload (DownloadInstruction) returns (ActionResponse);
+  rpc UpdateTopology (TopologyInstruction) returns (ActionResponse);
+  rpc GetTelemetry (TelemetryRequest) returns (TelemetryResponse);
+  rpc CancelTransfer (CancelRequest) returns (ActionResponse);
+}
+
+message PingRequest {
+  uint64 timestamp = 1;
+}
+
+message PingResponse {
+  uint64 timestamp = 1;
+  string daemon_version = 2;
+  uint64 free_disk_bytes = 3;
+  string hostname = 4;
+}
+
+message DownloadInstruction {
+  string file_id = 1;
+  string file_name = 2;
+  uint64 file_size = 3;
+  bytes file_hash = 4;
+  string parent_address = 5;
+  repeated string children_addresses = 6;
+}
+
+message TopologyInstruction {
+  string file_id = 1;
+  string new_parent_address = 2;
+  repeated string new_children_addresses = 3;
+}
+
+message ActionResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message TelemetryRequest {}
+
+message TelemetryResponse {
+  uint32 progress_percent = 1;
+  uint64 download_speed_bps = 2;
+  float cpu_usage = 3;
+  float ram_usage = 4;
+  string current_file_id = 5;
+}
+
+message CancelRequest {
+  string file_id = 1;
+}

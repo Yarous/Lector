@@ -1,0 +1,13 @@
+[package]
+name = "lector-transport"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+quinn.workspace = true
+rustls.workspace = true
+tokio.workspace = true
+sha2.workspace = true
+tracing.workspace = true
+anyhow.workspace = true
+rcgen.workspace = true

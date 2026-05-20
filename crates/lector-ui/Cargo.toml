@@ -1,0 +1,22 @@
+[package]
+name = "lector-ui"
+version.workspace = true
+edition.workspace = true
+build = "build.rs"
+
+[dependencies]
+lector-proto = { path = "../lector-proto" }
+lector-topology = { path = "../lector-topology" }
+lector-transport = { path = "../lector-transport" }
+tokio.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+slint = "1"
+sha2.workspace = true
+rfd = "0.17.2"
+hex = "0.4"
+
+[build-dependencies]
+slint-build = "1"
