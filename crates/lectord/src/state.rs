@@ -8,16 +8,16 @@ use tokio::sync::watch;
 use lector_transport::receiver::ReceiveProgress;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    pub grpc_port: u16,
-    pub quic_port: u16,
-    pub download_dir: PathBuf,
+pub(crate) struct Config {
+    pub(crate) grpc_port: u16,
+    pub(crate) quic_port: u16,
+    pub(crate) download_dir: PathBuf,
     #[serde(default)]
-    pub teacher_addr: Option<String>,
+    pub(crate) teacher_addr: Option<String>,
 }
 
 impl Config {
-    pub fn load() -> anyhow::Result<Self> {
+    pub(crate) fn load() -> anyhow::Result<Self> {
         let path = std::env::var("LECTOR_CONFIG").unwrap_or_else(|_| {
             if cfg!(windows) {
                 r"C:\ProgramData\Lector\config.toml".into()
@@ -47,14 +47,15 @@ impl Default for Config {
     }
 }
 
+#[allow(unused)]
 #[derive(Debug, Clone)]
-pub struct TransferState {
-    pub file_id: String,
-    pub file_name: String,
-    pub file_size: u64,
-    pub parent: SocketAddr,
-    pub children: Vec<SocketAddr>,
-    pub progress_rx: watch::Receiver<ReceiveProgress>,
+pub(crate) struct TransferState {
+    pub(crate) file_id: String,
+    pub(crate) file_name: String,
+    pub(crate) file_size: u64,
+    pub(crate) parent: SocketAddr,
+    pub(crate) children: Vec<SocketAddr>,
+    pub(crate) progress_rx: watch::Receiver<ReceiveProgress>,
 }
 
 #[derive(Debug, Clone)]
