@@ -1,23 +1,22 @@
 use dashmap::DashMap;
+use lector_transport::{receiver::ReceiveProgress, Endpoint};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::watch;
 
-use lector_transport::receiver::ReceiveProgress;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct Config {
-    pub(crate) grpc_port: u16,
-    pub(crate) quic_port: u16,
-    pub(crate) download_dir: PathBuf,
+pub struct Config {
+    pub grpc_port: u16,
+    pub quic_port: u16,
+    pub download_dir: PathBuf,
     #[serde(default)]
-    pub(crate) teacher_addr: Option<String>,
+    pub teacher_addr: Option<String>,
 }
 
 impl Config {
-    pub(crate) fn load() -> anyhow::Result<Self> {
+    pub fn load() -> anyhow::Result<Self> {
         let path = std::env::var("LECTOR_CONFIG").unwrap_or_else(|_| {
             if cfg!(windows) {
                 r"C:\ProgramData\Lector\config.toml".into()
@@ -25,6 +24,7 @@ impl Config {
                 "/etc/lector/config.toml".into()
             }
         });
+
         match std::fs::read_to_string(&path) {
             Ok(content) => Ok(toml::from_str(&content)?),
             Err(_) => Ok(Self::default()),
@@ -47,28 +47,29 @@ impl Default for Config {
     }
 }
 
-#[allow(unused)]
 #[derive(Debug, Clone)]
-pub(crate) struct TransferState {
-    pub(crate) file_id: String,
-    pub(crate) file_name: String,
-    pub(crate) file_size: u64,
-    pub(crate) parent: SocketAddr,
-    pub(crate) children: Vec<SocketAddr>,
-    pub(crate) progress_rx: watch::Receiver<ReceiveProgress>,
+pub struct TransferState {
+    pub file_id: String,
+    pub file_name: String,
+    pub file_size: u64,
+    pub parent: SocketAddr,
+    pub children: Vec<SocketAddr>,
+    pub progress_rx: watch::Receiver<ReceiveProgress>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct DaemonState {
     pub config: Config,
+    pub quic_endpoint: Endpoint,
     pub transfers: Arc<DashMap<String, TransferState>>,
     pub active_transfer: Arc<tokio::sync::Mutex<Option<String>>>,
 }
 
 impl DaemonState {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, quic_endpoint: Endpoint) -> Self {
         Self {
             config,
+            quic_endpoint,
             transfers: Arc::new(DashMap::new()),
             active_transfer: Arc::new(tokio::sync::Mutex::new(None)),
         }

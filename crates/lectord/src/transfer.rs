@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use std::net::SocketAddr;
 use tokio::sync::watch;
 
@@ -9,7 +9,33 @@ use lector_transport::receiver::{FileReceiver, ReceiveProgress};
 use crate::state::{DaemonState, TransferState};
 
 pub async fn execute(state: DaemonState, instruction: DownloadInstruction) -> Result<()> {
+    {
+        let mut active = state.active_transfer.lock().await;
+        if active.is_some() {
+            bail!("transfer already in progress");
+        }
+        *active = Some(instruction.file_id.clone());
+    }
+
+    let result = execute_inner(state.clone(), instruction.clone()).await;
+
+    {
+        let mut active = state.active_transfer.lock().await;
+        if active.as_deref() == Some(instruction.file_id.as_str()) {
+            *active = None;
+        }
+    }
+
+    if result.is_err() {
+        state.transfers.remove(&instruction.file_id);
+    }
+
+    result
+}
+
+async fn execute_inner(state: DaemonState, instruction: DownloadInstruction) -> Result<()> {
     let dest = state.config.download_dir.join(&instruction.file_name);
+
     tokio::fs::create_dir_all(&state.config.download_dir).await?;
 
     let parent_addr: SocketAddr = instruction.parent_address.parse()?;
@@ -31,20 +57,19 @@ pub async fn execute(state: DaemonState, instruction: DownloadInstruction) -> Re
     };
 
     state.transfers.insert(instruction.file_id.clone(), transfer);
-    {
-        let mut active = state.active_transfer.lock().await;
-        *active = Some(instruction.file_id.clone());
-    }
 
-    let bind_addr: SocketAddr = format!("0.0.0.0:{}", state.config.quic_port).parse()?;
     let expected_size = Some(instruction.file_size);
+    let server_endpoint = state.quic_endpoint.clone();
 
     let hash = if children.is_empty() {
-        let receiver = FileReceiver::new(bind_addr)?;
-        receiver.receive_file(&dest, expected_size, progress_tx).await?
+        let receiver = FileReceiver::from_endpoint(server_endpoint);
+        receiver
+            .receive_file(&dest, expected_size, progress_tx)
+            .await?
     } else {
-        let node = CascadeNode::new(bind_addr)?;
-        node.receive_and_forward(&dest, &children, expected_size, progress_tx).await?
+        let node = CascadeNode::from_server_endpoint(server_endpoint);
+        node.receive_and_forward(&dest, &children, expected_size, progress_tx)
+            .await?
     };
 
     tracing::info!(
@@ -52,11 +77,6 @@ pub async fn execute(state: DaemonState, instruction: DownloadInstruction) -> Re
         hash = %hex::encode(hash),
         "transfer complete"
     );
-
-    {
-        let mut active = state.active_transfer.lock().await;
-        *active = None;
-    }
 
     Ok(())
 }

@@ -17,6 +17,8 @@ export global AppBridge {
     in-out property <bool> distributing: false;
     in-out property <bool> scanning: false;
     in-out property <int> overall-progress: 0;
+    in-out property <int> selected-count-value: 0;
+    in-out property <int> online-count-value: 0;
 
     pure callback count-selected() -> int;
     pure callback count-online() -> int;
@@ -126,8 +128,8 @@ export component MainWindow inherits Window {
 
         Toolbar {
             distributing: AppBridge.distributing;
-            selected-count: AppBridge.count-selected();
-            online-count: AppBridge.count-online();
+            selected-count: AppBridge.selected-count-value;
+            online-count: AppBridge.online-count-value;
             file-name: AppBridge.selected-file-name;
             has-file: AppBridge.selected-file-path != "";
 
@@ -176,7 +178,7 @@ export component MainWindow inherits Window {
 
         StatusBar {
             message: AppBridge.status-text;
-            online-count: AppBridge.count-online();
+            online-count: AppBridge.online-count-value;
             total-count: AppBridge.peers.length;
             scanning: AppBridge.scanning;
         }

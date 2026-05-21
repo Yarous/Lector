@@ -21,22 +21,39 @@ pub struct ReceiveProgress {
     pub total_bytes: Option<u64>,
 }
 
+pub fn create_server_endpoint(bind_addr: SocketAddr) -> Result<Endpoint> {
+    let pair = certs::CertPair::generate(vec!["localhost".into()])?;
+    let server_config = certs::make_server_config(&pair)?;
+    let endpoint = Endpoint::server(server_config, bind_addr)?;
+    Ok(endpoint)
+}
+
 impl FileReceiver {
     pub fn new(bind_addr: SocketAddr) -> Result<Self> {
-        let pair = certs::CertPair::generate(vec!["localhost".into()])?;
-        let server_config = certs::make_server_config(&pair)?;
-        let endpoint = Endpoint::server(server_config, bind_addr)?;
-        Ok(Self { endpoint })
+        Ok(Self {
+            endpoint: create_server_endpoint(bind_addr)?,
+        })
+    }
+
+    pub fn from_endpoint(endpoint: Endpoint) -> Self {
+        Self { endpoint }
     }
 
     pub async fn receive_file(
-        &self, dest: &Path, expected_size: Option<u64>,
+        &self,
+        dest: &Path,
+        expected_size: Option<u64>,
         progress_tx: watch::Sender<ReceiveProgress>,
     ) -> Result<[u8; 32]> {
-        let incoming = self.endpoint.accept().await
+        let incoming = self
+            .endpoint
+            .accept()
+            .await
             .ok_or_else(|| anyhow::anyhow!("endpoint closed"))?;
+
         let connection = incoming.await?;
         let mut recv_stream = connection.accept_uni().await?;
+
         let mut file = File::create(dest).await?;
         let mut buf = vec![0u8; CHUNK_SIZE];
         let mut hasher = Sha256::new();
@@ -45,10 +62,14 @@ impl FileReceiver {
         loop {
             let n = recv_stream.read(&mut buf).await?;
             let Some(n) = n else { break };
-            if n == 0 { break; }
+            if n == 0 {
+                break;
+            }
+
             hasher.update(&buf[..n]);
             file.write_all(&buf[..n]).await?;
             received += n as u64;
+
             let _ = progress_tx.send(ReceiveProgress {
                 bytes_received: received,
                 total_bytes: expected_size,

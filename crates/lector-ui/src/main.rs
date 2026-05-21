@@ -49,7 +49,7 @@ fn setup_scan(ui: &MainWindow, state: &app_state::AppState) {
         std::thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
             let results = rt.block_on(discovery::scan_network(&peers));
-            state.resize_selection(results.len());
+            state.replace_peers(results.iter().map(|r| r.addr).collect());
 
             slint::invoke_from_event_loop(move || {
                 let Some(ui) = ui.upgrade() else { return };
@@ -71,6 +71,8 @@ fn setup_scan(ui: &MainWindow, state: &app_state::AppState) {
 
                 bridge.set_peers(ModelRc::from(Rc::new(VecModel::from(model))));
                 bridge.set_scanning(false);
+                bridge.set_selected_count_value(state.selected_count() as i32);
+                bridge.set_online_count_value(online as i32);
                 bridge.set_status_text(
                     format!("Scan complete — {} of {} peers online", online, total).into(),
                 );
@@ -114,6 +116,7 @@ fn setup_peer_toggle(ui: &MainWindow, state: &app_state::AppState) {
 
     ui.global::<AppBridge>().on_peer_toggled(move |idx, val| {
         state.set_peer_selected(idx as usize, val);
+        eprintln!("DEBUG: toggled idx={} val={} selected_count={}", idx, val, state.selected_count());
         refresh_peers_selection(&ui_weak, &state);
     });
 }
@@ -203,7 +206,9 @@ fn refresh_peers_selection(ui_weak: &slint::Weak<MainWindow>, state: &app_state:
         }))
         .collect();
 
-    bridge.set_peers(ModelRc::from(Rc::new(VecModel::from(updated))));
+    bridge.set_peers(ModelRc::from(Rc::new(VecModel::from(updated.clone()))));
+    bridge.set_selected_count_value(state.selected_count() as i32);
+    bridge.set_online_count_value(updated.iter().filter(|p| p.status == "online").count() as i32);
 }
 
 fn set_bridge(ui: &slint::Weak<MainWindow>, f: impl FnOnce(&AppBridge) + Send + 'static) {

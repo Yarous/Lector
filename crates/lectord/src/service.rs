@@ -1,5 +1,6 @@
 #[cfg(windows)]
 pub mod windows_service {
+    use lector_transport::receiver::create_server_endpoint;
     use windows_service::{
         define_windows_service,
         service::{
@@ -45,7 +46,9 @@ pub mod windows_service {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let config = crate::state::Config::load().unwrap();
-            let state = crate::state::DaemonState::new(config.clone());
+            let quic_addr = format!("0.0.0.0:{}", config.quic_port).parse().unwrap();
+            let quic_endpoint = create_server_endpoint(quic_addr).unwrap();
+            let state = crate::state::DaemonState::new(config.clone(), quic_endpoint);
             let addr = format!("0.0.0.0:{}", config.grpc_port).parse().unwrap();
             crate::grpc_server::serve(addr, state).await.unwrap();
         });

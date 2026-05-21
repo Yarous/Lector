@@ -1,0 +1,33 @@
+[package]
+name = "lector-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+lector-proto = { path = "../lector-proto" }
+lector-topology = { path = "../lector-topology" }
+lector-transport = { path = "../lector-transport" }
+tokio = { workspace = true, features = ["full", "test-util"] }
+sha2.workspace = true
+prost.workspace = true
+
+[[test]]
+name = "topology"
+path = "tests/topology_tests.rs"
+
+[[test]]
+name = "transport"
+path = "tests/transport_tests.rs"
+
+[[test]]
+name = "cascade"
+path = "tests/cascade_tests.rs"
+
+[[test]]
+name = "proto"
+path = "tests/proto_tests.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration_tests.rs"

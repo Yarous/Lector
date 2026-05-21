@@ -16,10 +16,12 @@ struct Inner {
 
 impl AppState {
     pub fn new() -> Self {
-        let default_peers: Vec<SocketAddr> = (1..=30)
-            .map(|i| format!("192.168.1.{}:50051", 100 + i).parse().unwrap())
+        let default_peers: Vec<SocketAddr> = (1..=100)
+            .map(|i| format!("192.168.1.{}:50051", i).parse().unwrap())
             .collect();
+
         let count = default_peers.len();
+
         Self {
             inner: Arc::new(Mutex::new(Inner {
                 peer_addresses: default_peers,
@@ -31,6 +33,12 @@ impl AppState {
 
     pub fn peers(&self) -> Vec<SocketAddr> {
         self.inner.lock().unwrap().peer_addresses.clone()
+    }
+
+    pub fn replace_peers(&self, peers: Vec<SocketAddr>) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.peer_addresses = peers;
+        inner.selected_peers = vec![false; inner.peer_addresses.len()];
     }
 
     pub fn set_selected_file(&self, path: PathBuf) {
@@ -64,7 +72,9 @@ impl AppState {
 
     pub fn selected_peer_addresses(&self) -> Vec<SocketAddr> {
         let inner = self.inner.lock().unwrap();
-        inner.peer_addresses.iter()
+        inner
+            .peer_addresses
+            .iter()
             .zip(inner.selected_peers.iter())
             .filter(|(_, selected)| **selected)
             .map(|(addr, _)| *addr)
@@ -72,14 +82,22 @@ impl AppState {
     }
 
     pub fn is_selected(&self, idx: usize) -> bool {
-        self.inner.lock().unwrap().selected_peers.get(idx).copied().unwrap_or(false)
+        let inner = self.inner.lock().unwrap();
+        inner.selected_peers.get(idx).copied().unwrap_or(false)
     }
 
     pub fn selected_count(&self) -> usize {
-        self.inner.lock().unwrap().selected_peers.iter().filter(|s| **s).count()
+        self.inner
+            .lock()
+            .unwrap()
+            .selected_peers
+            .iter()
+            .filter(|s| **s)
+            .count()
     }
 
     pub fn resize_selection(&self, count: usize) {
-        self.inner.lock().unwrap().selected_peers.resize(count, false);
+        let mut inner = self.inner.lock().unwrap();
+        inner.selected_peers.resize(count, false);
     }
 }

@@ -6,6 +6,7 @@ members = [
     "crates/lector-topology",
     "crates/lectord",
     "crates/lector-ui",
+    "crates/lector-tests",
 ]
 
 [workspace.package]
