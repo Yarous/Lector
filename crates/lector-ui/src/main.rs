@@ -29,7 +29,6 @@ fn setup_callbacks(ui: &MainWindow, state: &app_state::AppState) {
     setup_select_all(ui, state);
     setup_deselect_all(ui, state);
     setup_distribution(ui, state);
-    setup_counters(ui, state);
 }
 
 fn setup_scan(ui: &MainWindow, state: &app_state::AppState) {
@@ -55,6 +54,9 @@ fn setup_scan(ui: &MainWindow, state: &app_state::AppState) {
                 let Some(ui) = ui.upgrade() else { return };
                 let bridge = ui.global::<AppBridge>();
 
+                let online = results.iter().filter(|r| r.online).count();
+                let total = results.len();
+
                 let model: Vec<PeerInfo> = results.iter().enumerate().map(|(idx, r)| PeerInfo {
                     address: r.addr.to_string().into(),
                     hostname: r.hostname.clone().into(),
@@ -66,11 +68,10 @@ fn setup_scan(ui: &MainWindow, state: &app_state::AppState) {
                     version: r.version.clone().into(),
                 }).collect();
 
-                let online = results.iter().filter(|r| r.online).count();
-                let total = results.len();
-
                 bridge.set_peers(ModelRc::from(Rc::new(VecModel::from(model))));
                 bridge.set_scanning(false);
+                bridge.set_online_count(online as i32);
+                bridge.set_selected_count(state.selected_count() as i32);
                 bridge.set_status_text(
                     format!("Scan complete — {} of {} peers online", online, total).into(),
                 );
@@ -114,7 +115,7 @@ fn setup_peer_toggle(ui: &MainWindow, state: &app_state::AppState) {
 
     ui.global::<AppBridge>().on_peer_toggled(move |idx, val| {
         state.set_peer_selected(idx as usize, val);
-        refresh_peers_selection(&ui_weak, &state);
+        update_ui_state(&ui_weak, &state);
     });
 }
 
@@ -131,7 +132,7 @@ fn setup_select_all(ui: &MainWindow, state: &app_state::AppState) {
                 .collect();
 
             state.select_all_online(&online_indices);
-            refresh_peers_selection(&ui_weak, &state);
+            update_ui_state(&ui_weak, &state);
         }
     });
 }
@@ -142,7 +143,7 @@ fn setup_deselect_all(ui: &MainWindow, state: &app_state::AppState) {
 
     ui.global::<AppBridge>().on_deselect_all(move || {
         state.deselect_all();
-        refresh_peers_selection(&ui_weak, &state);
+        update_ui_state(&ui_weak, &state);
     });
 }
 
@@ -175,23 +176,7 @@ fn setup_distribution(ui: &MainWindow, state: &app_state::AppState) {
     });
 }
 
-fn setup_counters(ui: &MainWindow, state: &app_state::AppState) {
-    let state_sel = state.clone();
-    ui.global::<AppBridge>().on_count_selected(move || {
-        state_sel.selected_count() as i32
-    });
-
-    let ui_weak = ui.as_weak();
-    ui.global::<AppBridge>().on_count_online(move || {
-        let Some(ui) = ui_weak.upgrade() else { return 0 };
-        let peers = ui.global::<AppBridge>().get_peers();
-        (0..peers.row_count())
-            .filter(|i| peers.row_data(*i).map(|p| p.status == "online").unwrap_or(false))
-            .count() as i32
-    });
-}
-
-fn refresh_peers_selection(ui_weak: &slint::Weak<MainWindow>, state: &app_state::AppState) {
+fn update_ui_state(ui_weak: &slint::Weak<MainWindow>, state: &app_state::AppState) {
     let Some(ui) = ui_weak.upgrade() else { return };
     let bridge = ui.global::<AppBridge>();
     let peers = bridge.get_peers();
@@ -203,7 +188,11 @@ fn refresh_peers_selection(ui_weak: &slint::Weak<MainWindow>, state: &app_state:
         }))
         .collect();
 
+    let online = updated.iter().filter(|p| p.status == "online").count();
+
     bridge.set_peers(ModelRc::from(Rc::new(VecModel::from(updated))));
+    bridge.set_selected_count(state.selected_count() as i32);
+    bridge.set_online_count(online as i32);
 }
 
 fn set_bridge(ui: &slint::Weak<MainWindow>, f: impl FnOnce(&AppBridge) + Send + 'static) {
