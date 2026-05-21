@@ -17,9 +17,8 @@ export global AppBridge {
     in-out property <bool> distributing: false;
     in-out property <bool> scanning: false;
     in-out property <int> overall-progress: 0;
-
-    pure callback count-selected() -> int;
-    pure callback count-online() -> int;
+    in-out property <int> selected-count: 0;
+    in-out property <int> online-count: 0;
 
     callback scan-network();
     callback select-file();
@@ -28,9 +27,6 @@ export global AppBridge {
     callback select-all();
     callback deselect-all();
     callback peer-toggled(int, bool);
-
-    count-selected() => { return 0; }
-    count-online() => { return 0; }
 }
 
 component EmptyState inherits Rectangle {
@@ -126,8 +122,8 @@ export component MainWindow inherits Window {
 
         Toolbar {
             distributing: AppBridge.distributing;
-            selected-count: AppBridge.count-selected();
-            online-count: AppBridge.count-online();
+            selected-count: AppBridge.selected-count;
+            online-count: AppBridge.online-count;
             file-name: AppBridge.selected-file-name;
             has-file: AppBridge.selected-file-path != "";
 
@@ -176,7 +172,7 @@ export component MainWindow inherits Window {
 
         StatusBar {
             message: AppBridge.status-text;
-            online-count: AppBridge.count-online();
+            online-count: AppBridge.online-count;
             total-count: AppBridge.peers.length;
             scanning: AppBridge.scanning;
         }
